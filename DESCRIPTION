@@ -1,0 +1,19 @@
+Package: RSVModels
+Title: RSV dynamic epidemiological model implementations
+Version: 0.0.1
+Authors@R: 
+    person("Michael", "Dymock", , "michael.dymock@thekids.org.au", role = c("aut", "cre"))
+Description: This R package contains implementations for a range of respiratory syncytial virus (RSV) dynamic epidemiological models.
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Imports: 
+    conmat,
+    deSolve,
+    ggplot2
