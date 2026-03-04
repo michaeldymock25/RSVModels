@@ -46,19 +46,31 @@ initial_values <- function(mod, size_months){
 }
 
 #' @title aggregate_output
-#' @description Aggregates transmission model outputs (specifically incidence).
+#' @description Aggregates transmission model outputs.
 #' @param mod The specific transmission model that requires initial values (base, vax or mab).
 #' @param out Transmission model output.
 #' @param times Vector of times used to fit transmission model.
 #' @param age_years Age in years for each age group. Is a parameter in parms.
-#' @return Returns list containing out (reformatted transmission model output), incidence (incidence outputs) and annual_incidence (incidence in final simulated year).
+#' @return Returns list containing reformatted transmission model outputs.
 #' @name aggregate_output
 #' @export
 aggregate_output <- function(mod, out, times, age_years){
   col <- ifelse(mod == "base", 5, 6)
   out <- lapply(out, function(x) array(x[,-1], dim = c(max(times), 75, col), dimnames = list(NULL, age_years, NULL)))
-  inc_l <- lapply(out, function(x) x[,,col])
-  incidence <- array(unlist(inc_l), dim = c(dim(inc_l[[1]]), length(inc_l)))
-  annual_incidence <- apply(incidence[(max(times) - 1/unique(diff(times)) + 1):max(times),,], c(2,3), sum)
-  return(list(out = out, incidence = incidence, annual_incidence = annual_incidence))
+  return(out)
 }
+
+#' @title extract_incidence
+#' @description Extracts incidence estimates from the model output for the final year.
+#' @param mod The specific transmission model that requires initial values (base, vax or mab).
+#' @param out Transmission model output.
+#' @param times Vector of times used to fit transmission model.
+#' @return Returns matrix of incidence (rows are simulations and columns are age groups).
+#' @name extract_incidence
+#' @export
+extract_incidence <- function(mod, out, times){
+  col <- ifelse(mod == "base", 5, 6)
+  inc <- t(sapply(out, function(x) colSums(array(x[,-1], dim = c(max(times), 75, col))[(max(times) - 1/unique(diff(times)) + 1):max(times),,col])))
+  return(inc)
+}
+

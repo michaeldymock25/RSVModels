@@ -1,4 +1,6 @@
 
+set.seed(6824767)
+
 N_sim <- 10000
 pop <- readRDS("Data/auspop.rds")
 mixing <- as.matrix(read.csv("Data/mixing.csv", header = TRUE), header = TRUE)
@@ -22,3 +24,5 @@ parms <- list(total_pop   = sum(pop$population),
               rho_M       = rep(0.8, N_sim),
               p_mab       = sample(3:9, size = N_sim, replace = TRUE),
               kappa_M     = rbeta(N_sim, 10, 1.765))
+
+saveRDS(parms, file = "Data/parameters.rds")
