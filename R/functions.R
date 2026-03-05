@@ -2,16 +2,17 @@
 #' @title get_contact_matrix
 #' @description Generates social contact mixing matrix based on the Australian population
 #' @import conmat
+#' @param pop Table containing population data. Must contain columns called "age" and "population" containing the lower age limit for and population size, respectively.
 #' @param seed Optional parameter used for reproducibility. Defaults to 6824767.
 #' @return Returns mixing matrix and saves output into Data/mixing.csv.
 #' @name get_contact_matrix
 #' @export
-get_contact_matrix <- function(seed = 6824767){
+get_contact_matrix <- function(pop, seed = 6824767){
   set.seed(seed)
-  pop <- readRDS("Data/auspop.rds")
+  pop_conmat <- as_conmat_population(pop, age = age, population = population)
   setting_models <- fit_setting_contacts(contact_data_list = get_polymod_setting_data(countries = "United Kingdom"),
                                          population = get_polymod_population(countries = "United Kingdom"))
-  mixing_agg <- predict_setting_contacts(population = pop, contact_model = setting_models, age_breaks = pop$lower.age.limit)
+  mixing_agg <- predict_setting_contacts(population = pop_conmat, contact_model = setting_models, age_breaks = pop_conmat$age)
   mixing_agg <- mixing_agg$all
   mixing_agg_sym <- matrix(0, nrow = 16, ncol = 16)
   for(i in 1:16) for(j in 1:16) mixing_agg_sym[i,j] <- (mixing_agg[i,j] + mixing_agg[j, i])/2

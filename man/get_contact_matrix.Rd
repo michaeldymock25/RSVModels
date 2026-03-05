@@ -3,7 +3,12 @@
 \name{get_contact_matrix}
 \alias{get_contact_matrix}
 \title{get_contact_matrix}
+\usage{
+get_contact_matrix(pop, seed = 6824767)
+}
 \arguments{
+\item{pop}{Table containing population data. Must contain columns called "age" and "population" containing the lower age limit for and population size, respectively.}
+
 \item{seed}{Optional parameter used for reproducibility. Defaults to 6824767.}
 }
 \value{

@@ -3,6 +3,9 @@
 \name{initial_values}
 \alias{initial_values}
 \title{initial_values}
+\usage{
+initial_values(mod, size_months)
+}
 \arguments{
 \item{mod}{The specific transmission model that requires initial values (base, vax or mab).}
 
