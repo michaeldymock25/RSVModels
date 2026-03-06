@@ -9,7 +9,7 @@
 #' @export
 get_contact_matrix <- function(pop, seed = 6824767){
   set.seed(seed)
-  suppressPackageStartupMessages(library(conmat, character.only = TRUE))
+  suppressPackageStartupMessages(library("conmat", character.only = TRUE))
   on.exit(detach("package:conmat", unload = TRUE), add = TRUE)
   pop_conmat <- conmat::as_conmat_population(pop, age = age, population = population)
   setting_models <- conmat::fit_setting_contacts(contact_data_list = conmat::get_polymod_setting_data(countries = "United Kingdom"),
