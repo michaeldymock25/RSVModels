@@ -46,32 +46,19 @@ initial_values <- function(mod, size_months){
   return(y0)
 }
 
-#' @title aggregate_output
-#' @description Aggregates transmission model outputs.
-#' @param mod The specific transmission model that requires initial values (base, vax or mab).
-#' @param out Transmission model output.
-#' @param times Vector of times used to fit transmission model.
-#' @param age_years Age in years for each age group. Is a parameter in parms.
-#' @return Returns list containing reformatted transmission model outputs.
-#' @name aggregate_output
-#' @export
-aggregate_output <- function(mod, out, times, age_years){
-  col <- ifelse(mod == "base", 5, 6)
-  out <- lapply(out, function(x) array(x[,-1], dim = c(max(times), 75, col), dimnames = list(NULL, age_years, NULL)))
-  return(out)
-}
-
 #' @title extract_incidence
-#' @description Extracts incidence estimates from the model output for the final year.
+#' @description Extracts incidence estimates from the model output for a given time period.
 #' @param mod The specific transmission model that requires initial values (base, vax or mab).
 #' @param out Transmission model output.
-#' @param times Vector of times used to fit transmission model.
+#' @param times Time period for incidence extraction
+#' @param total Logical indictor. If TRUE then will sum over time period, otherwise will return disaggregated. Default is TRUE.
 #' @return Returns matrix of incidence (rows are simulations and columns are age groups).
 #' @name extract_incidence
 #' @export
-extract_incidence <- function(mod, out, times){
+extract_incidence <- function(mod, out, times, total = TRUE){
   col <- ifelse(mod == "base", 5, 6)
-  inc <- t(sapply(out, function(x) colSums(array(x[,-1], dim = c(max(times), 75, col))[(max(times) - 1/unique(diff(times)) + 1):max(times),,col])))
+  inc <- out[,times,,col]
+  if(total) inc <- apply(inc, c(1,3), sum)
   return(inc)
 }
 

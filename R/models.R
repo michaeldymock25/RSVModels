@@ -3,13 +3,13 @@
 #' @description Wrapper function for base model
 #' @import deSolve
 #' @param y0 Matrix of initial values of the state variables (rows are age groups and columns are variables)
-#' @param times Vector of times to evaluate model
+#' @param max_time Maximum time in months to run the model (includes burn in)
 #' @param parms Named list of model parameters
 #' @param N_sim Number of simulations (draws from the parameter prior distributions)
-#' @return Matrix of outputs (rows are times and columns are variables)
+#' @return Array of named outputs containing simulations, times, ages and states
 #' @name mod_base
 #' @export
-mod_base <- function(y0, times, parms, N_sim){
+mod_base <- function(y0, max_time, parms, N_sim){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 5)
 
@@ -35,10 +35,10 @@ mod_base <- function(y0, times, parms, N_sim){
     })
   }
 
-  out <- array(NA, dim = c(N_sim, max(times), 75, 5),
+  out <- array(NA, dim = c(N_sim, max_time, 75, 5),
                dimnames = list("simulation" = 1:N_sim,
-                               "time" = 1:max(times),
-                               "age" = parms$age_vect_years,
+                               "time" = 1:max_time,
+                               "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "Incidence")))
   for(sim in 1:N_sim){
     y0_tmp <- y0
@@ -51,11 +51,8 @@ mod_base <- function(y0, times, parms, N_sim){
                       delta       = parms$delta[sim],
                       gamma       = parms$gamma[sim],
                       nu          = parms$nu[sim],
-                      sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)),
-                      rho_V       = parms$rho_V[sim],
-                      p_vax       = parms$p_vax[sim],
-                      kappa_V     = parms$kappa_V[sim])
-    for(tt in 1:max(times)){
+                      sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)))
+    for(tt in 1:max_time){
       mod_out <- ode(y = y0_tmp,
                      times = seq(from = tt - 1, to = tt, by = 0.25),
                      func = deSolve_func,
@@ -71,7 +68,6 @@ mod_base <- function(y0, times, parms, N_sim){
     }
   }
 
-  out <- lapply(1:N_sim, function(sim) cbind(1:max(times), t(apply(out[sim,,,], 1, as.vector))))
   return(out)
 }
 
@@ -79,13 +75,13 @@ mod_base <- function(y0, times, parms, N_sim){
 #' @description Wrapper function for vaccine model
 #' @import deSolve
 #' @param y0 Matrix of initial values of the state variables (rows are age groups and columns are variables)
-#' @param times Vector of times to evaluate model
+#' @param max_time Maximum time in months to run the model (includes burn in)
 #' @param parms Named list of model parameters
 #' @param N_sim Number of simulations (draws from the parameter prior distributions)
-#' @return Matrix of outputs (rows are times and columns are variables)
+#' @return Array of named outputs containing simulations, times, ages and states
 #' @name mod_vax
 #' @export
-mod_vax <- function(y0, times, parms, N_sim){
+mod_vax <- function(y0, max_time, parms, N_sim){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 6)
 
@@ -114,10 +110,10 @@ mod_vax <- function(y0, times, parms, N_sim){
     })
   }
 
-  out <- array(NA, dim = c(N_sim, max(times), 75, 6),
+  out <- array(NA, dim = c(N_sim, max_time, 75, 6),
                dimnames = list("simulation" = 1:N_sim,
-                               "time" = 1:max(times),
-                               "age" = parms$age_vect_years,
+                               "time" = 1:max_time,
+                               "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "V", "Incidence")))
   for(sim in 1:N_sim){
     y0_tmp <- y0
@@ -134,7 +130,7 @@ mod_vax <- function(y0, times, parms, N_sim){
                       rho_V       = parms$rho_V[sim],
                       p_vax       = parms$p_vax[sim],
                       kappa_V     = parms$kappa_V[sim])
-    for(tt in 1:max(times)){
+    for(tt in 1:max_time){
       mod_out <- ode(y = y0_tmp,
                      times = seq(from = tt - 1, to = tt, by = 0.25),
                      func = deSolve_func,
@@ -154,7 +150,6 @@ mod_vax <- function(y0, times, parms, N_sim){
     }
   }
 
-  out <- lapply(1:N_sim, function(sim) cbind(1:max(times), t(apply(out[sim,,,], 1, as.vector))))
   return(out)
 }
 
@@ -162,13 +157,13 @@ mod_vax <- function(y0, times, parms, N_sim){
 #' @description Wrapper function for monoclonal antibody model
 #' @import deSolve
 #' @param y0 Matrix of initial values of the state variables (rows are age groups and columns are variables)
-#' @param times Vector of times to evaluate model
+#' @param max_time Maximum time in months to run the model (includes burn in)
 #' @param parms Named list of model parameters
 #' @param N_sim Number of simulations (draws from the parameter prior distributions)
-#' @return Matrix of outputs (rows are times and columns are variables)
+#' @return Array of named outputs containing simulations, times, ages and states.
 #' @name mod_mab
 #' @export
-mod_mab <- function(y0, times, parms, N_sim){
+mod_mab <- function(y0, max_time, parms, N_sim){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 6)
 
@@ -197,10 +192,10 @@ mod_mab <- function(y0, times, parms, N_sim){
     })
   }
 
-  out <- array(NA, dim = c(N_sim, max(times), 75, 6),
+  out <- array(NA, dim = c(N_sim, max_time, 75, 6),
                dimnames = list("simulation" = 1:N_sim,
-                               "time" = 1:max(times),
-                               "age" = parms$age_vect_years,
+                               "time" = 1:max_time,
+                               "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "M", "Incidence")))
   for(sim in 1:N_sim){
     y0_tmp <- y0
@@ -217,7 +212,7 @@ mod_mab <- function(y0, times, parms, N_sim){
                       rho_M       = parms$rho_M[sim],
                       p_mab       = parms$p_mab[sim],
                       kappa_M     = parms$kappa_M[sim])
-    for(tt in 1:max(times)){
+    for(tt in 1:max_time){
       mod_out <- ode(y = y0_tmp,
                      times = seq(from = tt - 1, to = tt, by = 0.25),
                      func = deSolve_func,
@@ -237,6 +232,5 @@ mod_mab <- function(y0, times, parms, N_sim){
     }
   }
 
-  out <- lapply(1:N_sim, function(sim) cbind(1:max(times), t(apply(out[sim,,,], 1, as.vector))))
   return(out)
 }

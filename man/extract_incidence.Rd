@@ -4,18 +4,20 @@
 \alias{extract_incidence}
 \title{extract_incidence}
 \usage{
-extract_incidence(mod, out, times)
+extract_incidence(mod, out, times, total = TRUE)
 }
 \arguments{
 \item{mod}{The specific transmission model that requires initial values (base, vax or mab).}
 
 \item{out}{Transmission model output.}
 
-\item{times}{Vector of times used to fit transmission model.}
+\item{times}{Time period for incidence extraction}
+
+\item{total}{Logical indictor. If TRUE then will sum over time period, otherwise will return disaggregated. Default is TRUE.}
 }
 \value{
 Returns matrix of incidence (rows are simulations and columns are age groups).
 }
 \description{
-Extracts incidence estimates from the model output for the final year.
+Extracts incidence estimates from the model output for a given time period.
 }

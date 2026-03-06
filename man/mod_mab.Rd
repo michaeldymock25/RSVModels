@@ -4,19 +4,19 @@
 \alias{mod_mab}
 \title{mod_mab}
 \usage{
-mod_mab(y0, times, parms, N_sim)
+mod_mab(y0, max_time, parms, N_sim)
 }
 \arguments{
 \item{y0}{Matrix of initial values of the state variables (rows are age groups and columns are variables)}
 
-\item{times}{Vector of times to evaluate model}
+\item{max_time}{Maximum time in months to run the model (includes burn in)}
 
 \item{parms}{Named list of model parameters}
 
 \item{N_sim}{Number of simulations (draws from the parameter prior distributions)}
 }
 \value{
-Matrix of outputs (rows are times and columns are variables)
+Array of named outputs containing simulations, times, ages and states.
 }
 \description{
 Wrapper function for monoclonal antibody model

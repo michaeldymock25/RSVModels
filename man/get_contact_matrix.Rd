@@ -12,7 +12,7 @@ get_contact_matrix(pop, seed = 6824767)
 \item{seed}{Optional parameter used for reproducibility. Defaults to 6824767.}
 }
 \value{
-Returns mixing matrix and saves output into Data/mixing.csv.
+Returns mixing matrix.
 }
 \description{
 Generates social contact mixing matrix based on the Australian population
