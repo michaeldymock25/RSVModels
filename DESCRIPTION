@@ -17,3 +17,5 @@ Imports:
     conmat,
     deSolve,
     ggplot2
+Remotes:
+    idem-lab/conmat

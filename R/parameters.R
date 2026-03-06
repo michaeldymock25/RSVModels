@@ -3,6 +3,7 @@ set.seed(6824767)
 
 N_sim <- 10000
 pop <- readRDS("Data/auspop.rds")
+pop <- data.frame(age = pop$lower.age.limit, population = pop$population)
 mixing <- as.matrix(read.csv("Data/mixing.csv", header = TRUE), header = TRUE)
 
 parms <- list(total_pop   = sum(pop$population),
