@@ -9,6 +9,8 @@
 #' @export
 get_contact_matrix <- function(pop, seed = 6824767){
   set.seed(seed)
+  utils::data("abs_avg_work", package = "conmat", envir = environment())
+  utils::data("abs_avg_school", package = "conmat", envir = environment())
   pop_conmat <- as_conmat_population(pop, age = age, population = population)
   setting_models <- fit_setting_contacts(contact_data_list = get_polymod_setting_data(countries = "United Kingdom"),
                                          population = get_polymod_population(countries = "United Kingdom"))
