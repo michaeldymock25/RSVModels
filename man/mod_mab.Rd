@@ -4,7 +4,7 @@
 \alias{mod_mab}
 \title{mod_mab}
 \usage{
-mod_mab(y0, max_time, parms, N_sim)
+mod_mab(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1)
 }
 \arguments{
 \item{y0}{Matrix of initial values of the state variables (rows are age groups and columns are variables)}
@@ -14,6 +14,10 @@ mod_mab(y0, max_time, parms, N_sim)
 \item{parms}{Named list of model parameters}
 
 \item{N_sim}{Number of simulations (draws from the parameter prior distributions)}
+
+\item{batch_size}{Size of each batch for parallel simulations. Default is 100.}
+
+\item{ncores}{Number of cores to run in parallel. Default is one.}
 }
 \value{
 Array of named outputs containing simulations, times, ages and states.

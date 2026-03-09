@@ -2,14 +2,17 @@
 #' @title mod_base
 #' @description Wrapper function for base model
 #' @import deSolve
+#' @import parallel
 #' @param y0 Matrix of initial values of the state variables (rows are age groups and columns are variables)
 #' @param max_time Maximum time in months to run the model (includes burn in)
 #' @param parms Named list of model parameters
 #' @param N_sim Number of simulations (draws from the parameter prior distributions)
+#' @param batch_size Size of each batch for parallel simulations. Default is 100.
+#' @param ncores Number of cores to run in parallel. Default is one.
 #' @return Array of named outputs containing simulations, times, ages and states
 #' @name mod_base
 #' @export
-mod_base <- function(y0, max_time, parms, N_sim){
+mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 5)
 
@@ -35,38 +38,56 @@ mod_base <- function(y0, max_time, parms, N_sim){
     })
   }
 
+  N_batch <- ceiling(N_sim/batch_size)
+  batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
+
+  batch_parms <- list()
+  for(i in 1:N_batch)
+    batch_parms[[i]] <- lapply((sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]), function(sim)
+                           list(size_months = parms$size_months,
+                                mixing      = parms$mixing,
+                                b0          = parms$b0,
+                                b1          = parms$b1,
+                                phi         = parms$phi,
+                                omega       = parms$omega,
+                                delta       = parms$delta[sim],
+                                gamma       = parms$gamma[sim],
+                                nu          = parms$nu[sim],
+                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12))))
+
+  out_l <- mclapply(1:N_batch, function(i){
+    tmp <- array(NA, dim = c(batch_lens[i], max_time, 75, 5),
+                 dimnames = list("simulation" = 1:batch_lens[i],
+                                 "time" = 1:max_time,
+                                 "age" = parms$age_years,
+                                 "variable" = c("S", "E", "I", "R", "Incidence")))
+    for(sim in 1:batch_lens[i]){
+      y0_tmp <- y0
+      parms_tmp <- batch_parms[[i]][[sim]]
+      for(tt in 1:max_time){
+        mod_out <- ode(y = y0_tmp,
+                       times = seq(from = tt - 1, to = tt, by = 0.25),
+                       func = deSolve_func,
+                       parms = parms_tmp)
+        tmp[sim,tt,,] <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 5)
+
+        y0_tmp <- matrix(0, nrow = 75, ncol = 4)
+        y0_tmp[1, 1] <- parms_tmp$size_months[1]/12
+        y0_tmp[2:60, 1:4] <- tmp[sim, tt, 1:59, 1:4]
+        y0_tmp[61, 1:4] <- tmp[sim, tt, 60, 1:4] + 59/60*tmp[sim, tt, 61, 1:4]
+        y0_tmp[62:75, 1:4] <- 1/60*tmp[sim, tt, 61:(75 - 1), 1:4] + 59/60*tmp[sim, tt, 62:75, 1:4]
+        y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
+      }
+    }
+    return(tmp)
+  }, mc.cores = ncores)
+
   out <- array(NA, dim = c(N_sim, max_time, 75, 5),
                dimnames = list("simulation" = 1:N_sim,
                                "time" = 1:max_time,
                                "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "Incidence")))
-  for(sim in 1:N_sim){
-    y0_tmp <- y0
-    parms_tmp <- list(size_months = parms$size_months,
-                      mixing      = parms$mixing,
-                      b0          = parms$b0,
-                      b1          = parms$b1,
-                      phi         = parms$phi,
-                      omega       = parms$omega,
-                      delta       = parms$delta[sim],
-                      gamma       = parms$gamma[sim],
-                      nu          = parms$nu[sim],
-                      sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)))
-    for(tt in 1:max_time){
-      mod_out <- ode(y = y0_tmp,
-                     times = seq(from = tt - 1, to = tt, by = 0.25),
-                     func = deSolve_func,
-                     parms = parms_tmp)
-      out[sim,tt,,] <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 5)
-
-      y0_tmp <- matrix(0, nrow = 75, ncol = 4)
-      y0_tmp[1, 1] <- parms_tmp$size_months[1]/12
-      y0_tmp[2:60, 1:4] <- out[sim, tt, 1:59, 1:4]
-      y0_tmp[61, 1:4] <- out[sim, tt, 60, 1:4] + 59/60*out[sim, tt, 61, 1:4]
-      y0_tmp[62:75, 1:4] <- 1/60*out[sim, tt, 61:(75 - 1), 1:4] + 59/60*out[sim, tt, 62:75, 1:4]
-      y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
-    }
-  }
+  for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
 
   return(out)
 }
@@ -74,14 +95,17 @@ mod_base <- function(y0, max_time, parms, N_sim){
 #' @title mod_vax
 #' @description Wrapper function for vaccine model
 #' @import deSolve
+#' @import parallel
 #' @param y0 Matrix of initial values of the state variables (rows are age groups and columns are variables)
 #' @param max_time Maximum time in months to run the model (includes burn in)
 #' @param parms Named list of model parameters
 #' @param N_sim Number of simulations (draws from the parameter prior distributions)
+#' @param batch_size Size of each batch for parallel simulations. Default is 100.
+#' @param ncores Number of cores to run in parallel. Default is one.
 #' @return Array of named outputs containing simulations, times, ages and states
 #' @name mod_vax
 #' @export
-mod_vax <- function(y0, max_time, parms, N_sim){
+mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 6)
 
@@ -110,45 +134,63 @@ mod_vax <- function(y0, max_time, parms, N_sim){
     })
   }
 
+  N_batch <- ceiling(N_sim/batch_size)
+  batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
+
+  batch_parms <- list()
+  for(i in 1:N_batch)
+    batch_parms[[i]] <- lapply((sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]), function(sim)
+                           list(size_months = parms$size_months,
+                                mixing      = parms$mixing,
+                                b0          = parms$b0,
+                                b1          = parms$b1,
+                                phi         = parms$phi,
+                                omega       = parms$omega,
+                                delta       = parms$delta[sim],
+                                gamma       = parms$gamma[sim],
+                                nu          = parms$nu[sim],
+                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12))),
+                                rho_V       = parms$rho_V[sim],
+                                p_vax       = parms$p_vax[sim],
+                                kappa_V     = parms$kappa_V[sim])
+
+  out_l <- mclapply(1:N_batch, function(i){
+    tmp <- array(NA, dim = c(batch_lens[i], max_time, 75, 6),
+                 dimnames = list("simulation" = 1:batch_lens[i],
+                                 "time" = 1:max_time,
+                                 "age" = parms$age_years,
+                                 "variable" = c("S", "E", "I", "R", "V", "Incidence")))
+    for(sim in 1:batch_lens[i]){
+      y0_tmp <- y0
+      parms_tmp <- batch_parms[[i]][[sim]]
+      for(tt in 1:max_time){
+        mod_out <- ode(y = y0_tmp,
+                       times = seq(from = tt - 1, to = tt, by = 0.25),
+                       func = deSolve_func,
+                       parms = parms_tmp)
+        tmp[sim,tt,,] <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 6)
+
+        y0_tmp <- matrix(0, nrow = 75, ncol = 5)
+        y0_tmp[1, 1] <- (1 - parms_tmp$kappa_V)*parms_tmp$size_months[1]/12
+        y0_tmp[1, 5] <- parms_tmp$kappa_V*parms_tmp$size_months[1]/12
+        y0_tmp[2:parms_tmp$p_vax, 1:5] <- tmp[sim, tt, 1:(parms_tmp$p_vax - 1), 1:5]
+        y0_tmp[parms_tmp$p_vax + 1, 1] <- tmp[sim, tt, parms_tmp$p_vax, 1] + tmp[sim, tt, parms_tmp$p_vax, 5]
+        y0_tmp[parms_tmp$p_vax + 1, 2:4] <- tmp[sim, tt, parms_tmp$p_vax, 2:4]
+        y0_tmp[(parms_tmp$p_vax + 2):60, 1:4] <- tmp[sim, tt, (parms_tmp$p_vax + 1):59, 1:4]
+        y0_tmp[61, 1:4] <- tmp[sim, tt, 60, 1:4] + 59/60*tmp[sim, tt, 61, 1:4]
+        y0_tmp[62:75, 1:4] <- 1/60*tmp[sim, tt, 61:(75 - 1), 1:4] + 59/60*tmp[sim, tt, 62:75, 1:4]
+        y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
+      }
+    }
+    return(tmp)
+  }, mc.cores = ncores)
+
   out <- array(NA, dim = c(N_sim, max_time, 75, 6),
                dimnames = list("simulation" = 1:N_sim,
                                "time" = 1:max_time,
                                "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "V", "Incidence")))
-  for(sim in 1:N_sim){
-    y0_tmp <- y0
-    parms_tmp <- list(size_months = parms$size_months,
-                      mixing      = parms$mixing,
-                      b0          = parms$b0,
-                      b1          = parms$b1,
-                      phi         = parms$phi,
-                      omega       = parms$omega,
-                      delta       = parms$delta[sim],
-                      gamma       = parms$gamma[sim],
-                      nu          = parms$nu[sim],
-                      sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)),
-                      rho_V       = parms$rho_V[sim],
-                      p_vax       = parms$p_vax[sim],
-                      kappa_V     = parms$kappa_V[sim])
-    for(tt in 1:max_time){
-      mod_out <- ode(y = y0_tmp,
-                     times = seq(from = tt - 1, to = tt, by = 0.25),
-                     func = deSolve_func,
-                     parms = parms_tmp)
-      out[sim,tt,,] <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 6)
-
-      y0_tmp <- matrix(0, nrow = 75, ncol = 5)
-      y0_tmp[1, 1] <- (1 - parms_tmp$kappa_V)*parms_tmp$size_months[1]/12
-      y0_tmp[1, 5] <- parms_tmp$kappa_V*parms_tmp$size_months[1]/12
-      y0_tmp[2:parms_tmp$p_vax, 1:5] <- out[sim, tt, 1:(parms_tmp$p_vax - 1), 1:5]
-      y0_tmp[parms_tmp$p_vax + 1, 1] <- out[sim, tt, parms_tmp$p_vax, 1] + out[sim, tt, parms_tmp$p_vax, 5]
-      y0_tmp[parms_tmp$p_vax + 1, 2:4] <- out[sim, tt, parms_tmp$p_vax, 2:4]
-      y0_tmp[(parms_tmp$p_vax + 2):60, 1:4] <- out[sim, tt, (parms_tmp$p_vax + 1):59, 1:4]
-      y0_tmp[61, 1:4] <- out[sim, tt, 60, 1:4] + 59/60*out[sim, tt, 61, 1:4]
-      y0_tmp[62:75, 1:4] <- 1/60*out[sim, tt, 61:(75 - 1), 1:4] + 59/60*out[sim, tt, 62:75, 1:4]
-      y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
-    }
-  }
+  for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
 
   return(out)
 }
@@ -156,14 +198,17 @@ mod_vax <- function(y0, max_time, parms, N_sim){
 #' @title mod_mab
 #' @description Wrapper function for monoclonal antibody model
 #' @import deSolve
+#' @import parallel
 #' @param y0 Matrix of initial values of the state variables (rows are age groups and columns are variables)
 #' @param max_time Maximum time in months to run the model (includes burn in)
 #' @param parms Named list of model parameters
 #' @param N_sim Number of simulations (draws from the parameter prior distributions)
+#' @param batch_size Size of each batch for parallel simulations. Default is 100.
+#' @param ncores Number of cores to run in parallel. Default is one.
 #' @return Array of named outputs containing simulations, times, ages and states.
 #' @name mod_mab
 #' @export
-mod_mab <- function(y0, max_time, parms, N_sim){
+mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 6)
 
@@ -192,45 +237,63 @@ mod_mab <- function(y0, max_time, parms, N_sim){
     })
   }
 
+  N_batch <- ceiling(N_sim/batch_size)
+  batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
+
+  batch_parms <- list()
+  for(i in 1:N_batch)
+    batch_parms[[i]] <- lapply((sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]), function(sim)
+                           list(size_months = parms$size_months,
+                                mixing      = parms$mixing,
+                                b0          = parms$b0,
+                                b1          = parms$b1,
+                                phi         = parms$phi,
+                                omega       = parms$omega,
+                                delta       = parms$delta[sim],
+                                gamma       = parms$gamma[sim],
+                                nu          = parms$nu[sim],
+                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12))),
+                                rho_M       = parms$rho_M[sim],
+                                p_mab       = parms$p_mab[sim],
+                                kappa_M     = parms$kappa_M[sim])
+
+  out_l <- mclapply(1:N_batch, function(i){
+    tmp <- array(NA, dim = c(batch_lens[i], max_time, 75, 6),
+                 dimnames = list("simulation" = 1:batch_lens[i],
+                                 "time" = 1:max_time,
+                                 "age" = parms$age_years,
+                                 "variable" = c("S", "E", "I", "R", "M", "Incidence")))
+    for(sim in 1:batch_lens[i]){
+      y0_tmp <- y0
+      parms_tmp <- batch_parms[[i]][[sim]]
+      for(tt in 1:max_time){
+        mod_out <- ode(y = y0_tmp,
+                       times = seq(from = tt - 1, to = tt, by = 0.25),
+                       func = deSolve_func,
+                       parms = parms_tmp)
+        tmp[sim,tt,,] <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 6)
+
+        y0_tmp <- matrix(0, nrow = 75, ncol = 5)
+        y0_tmp[1, 1] <- (1 - parms_tmp$kappa_M)*parms_tmp$size_months[1]/12
+        y0_tmp[1, 5] <- parms_tmp$kappa_M*parms_tmp$size_months[1]/12
+        y0_tmp[2:parms_tmp$p_mab, 1:5] <- tmp[sim, tt, 1:(parms_tmp$p_mab - 1), 1:5]
+        y0_tmp[parms_tmp$p_mab + 1, 1] <- tmp[sim, tt, parms_tmp$p_mab, 1] + tmp[sim, tt, parms_tmp$p_mab, 5]
+        y0_tmp[parms_tmp$p_mab + 1, 2:4] <- tmp[sim, tt, parms_tmp$p_mab, 2:4]
+        y0_tmp[(parms_tmp$p_mab + 2):60, 1:4] <- tmp[sim, tt, (parms_tmp$p_mab + 1):59, 1:4]
+        y0_tmp[61, 1:4] <- tmp[sim, tt, 60, 1:4] + 59/60*tmp[sim, tt, 61, 1:4]
+        y0_tmp[62:75, 1:4] <- 1/60*tmp[sim, tt, 61:(75 - 1), 1:4] + 59/60*tmp[sim, tt, 62:75, 1:4]
+        y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
+      }
+    }
+    return(tmp)
+  }, mc.cores = ncores)
+
   out <- array(NA, dim = c(N_sim, max_time, 75, 6),
                dimnames = list("simulation" = 1:N_sim,
                                "time" = 1:max_time,
                                "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "M", "Incidence")))
-  for(sim in 1:N_sim){
-    y0_tmp <- y0
-    parms_tmp <- list(size_months = parms$size_months,
-                      mixing      = parms$mixing,
-                      b0          = parms$b0,
-                      b1          = parms$b1,
-                      phi         = parms$phi,
-                      omega       = parms$omega,
-                      delta       = parms$delta[sim],
-                      gamma       = parms$gamma[sim],
-                      nu          = parms$nu[sim],
-                      sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)),
-                      rho_M       = parms$rho_M[sim],
-                      p_mab       = parms$p_mab[sim],
-                      kappa_M     = parms$kappa_M[sim])
-    for(tt in 1:max_time){
-      mod_out <- ode(y = y0_tmp,
-                     times = seq(from = tt - 1, to = tt, by = 0.25),
-                     func = deSolve_func,
-                     parms = parms_tmp)
-      out[sim,tt,,] <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 6)
-
-      y0_tmp <- matrix(0, nrow = 75, ncol = 5)
-      y0_tmp[1, 1] <- (1 - parms_tmp$kappa_M)*parms_tmp$size_months[1]/12
-      y0_tmp[1, 5] <- parms_tmp$kappa_M*parms_tmp$size_months[1]/12
-      y0_tmp[2:parms_tmp$p_mab, 1:5] <- out[sim, tt, 1:(parms_tmp$p_mab - 1), 1:5]
-      y0_tmp[parms_tmp$p_mab + 1, 1] <- out[sim, tt, parms_tmp$p_mab, 1] + out[sim, tt, parms_tmp$p_mab, 5]
-      y0_tmp[parms_tmp$p_mab + 1, 2:4] <- out[sim, tt, parms_tmp$p_mab, 2:4]
-      y0_tmp[(parms_tmp$p_mab + 2):60, 1:4] <- out[sim, tt, (parms_tmp$p_mab + 1):59, 1:4]
-      y0_tmp[61, 1:4] <- out[sim, tt, 60, 1:4] + 59/60*out[sim, tt, 61, 1:4]
-      y0_tmp[62:75, 1:4] <- 1/60*out[sim, tt, 61:(75 - 1), 1:4] + 59/60*out[sim, tt, 62:75, 1:4]
-      y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
-    }
-  }
+  for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
 
   return(out)
 }
