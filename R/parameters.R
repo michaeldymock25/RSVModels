@@ -20,10 +20,10 @@ parms <- list(total_pop   = sum(pop$population),
               nu          = 1/(rgamma(N_sim, 529, 2.3)/(365/12)),
               r_sigma     = runif(N_sim, 0.5, 1),
               rho_V       = rep(0.8, N_sim),
-              p_vax       = sample(3:9, size = N_sim, replace = TRUE),
+              dur_V       = sample(3:9, size = N_sim, replace = TRUE),
               kappa_V     = rbeta(N_sim, 10, 4.286),
               rho_M       = rep(0.8, N_sim),
-              p_mab       = sample(3:9, size = N_sim, replace = TRUE),
+              dur_M       = sample(3:9, size = N_sim, replace = TRUE),
               kappa_M     = rbeta(N_sim, 10, 1.765))
 
 saveRDS(parms, file = "Data/parameters.rds")

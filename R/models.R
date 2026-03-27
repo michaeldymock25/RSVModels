@@ -151,7 +151,7 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
                                 nu          = parms$nu[sim],
                                 sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12))),
                                 rho_V       = parms$rho_V[sim],
-                                p_vax       = parms$p_vax[sim],
+                                dur_V       = parms$dur_V[sim],
                                 kappa_V     = parms$kappa_V[sim])
 
   out_l <- mclapply(1:N_batch, function(i){
@@ -173,10 +173,10 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
         y0_tmp <- matrix(0, nrow = 75, ncol = 5)
         y0_tmp[1, 1] <- (1 - parms_tmp$kappa_V)*parms_tmp$size_months[1]/12
         y0_tmp[1, 5] <- parms_tmp$kappa_V*parms_tmp$size_months[1]/12
-        y0_tmp[2:parms_tmp$p_vax, 1:5] <- tmp[sim, tt, 1:(parms_tmp$p_vax - 1), 1:5]
-        y0_tmp[parms_tmp$p_vax + 1, 1] <- tmp[sim, tt, parms_tmp$p_vax, 1] + tmp[sim, tt, parms_tmp$p_vax, 5]
-        y0_tmp[parms_tmp$p_vax + 1, 2:4] <- tmp[sim, tt, parms_tmp$p_vax, 2:4]
-        y0_tmp[(parms_tmp$p_vax + 2):60, 1:4] <- tmp[sim, tt, (parms_tmp$p_vax + 1):59, 1:4]
+        y0_tmp[2:parms_tmp$dur_V, 1:5] <- tmp[sim, tt, 1:(parms_tmp$dur_V - 1), 1:5]
+        y0_tmp[parms_tmp$dur_V + 1, 1] <- tmp[sim, tt, parms_tmp$dur_V, 1] + tmp[sim, tt, parms_tmp$dur_V, 5]
+        y0_tmp[parms_tmp$dur_V + 1, 2:4] <- tmp[sim, tt, parms_tmp$dur_V, 2:4]
+        y0_tmp[(parms_tmp$dur_V + 2):60, 1:4] <- tmp[sim, tt, (parms_tmp$dur_V + 1):59, 1:4]
         y0_tmp[61, 1:4] <- tmp[sim, tt, 60, 1:4] + 59/60*tmp[sim, tt, 61, 1:4]
         y0_tmp[62:75, 1:4] <- 1/60*tmp[sim, tt, 61:(75 - 1), 1:4] + 59/60*tmp[sim, tt, 62:75, 1:4]
         y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
@@ -254,7 +254,7 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
                                 nu          = parms$nu[sim],
                                 sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12))),
                                 rho_M       = parms$rho_M[sim],
-                                p_mab       = parms$p_mab[sim],
+                                dur_M       = parms$dur_M[sim],
                                 kappa_M     = parms$kappa_M[sim])
 
   out_l <- mclapply(1:N_batch, function(i){
@@ -276,10 +276,10 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
         y0_tmp <- matrix(0, nrow = 75, ncol = 5)
         y0_tmp[1, 1] <- (1 - parms_tmp$kappa_M)*parms_tmp$size_months[1]/12
         y0_tmp[1, 5] <- parms_tmp$kappa_M*parms_tmp$size_months[1]/12
-        y0_tmp[2:parms_tmp$p_mab, 1:5] <- tmp[sim, tt, 1:(parms_tmp$p_mab - 1), 1:5]
-        y0_tmp[parms_tmp$p_mab + 1, 1] <- tmp[sim, tt, parms_tmp$p_mab, 1] + tmp[sim, tt, parms_tmp$p_mab, 5]
-        y0_tmp[parms_tmp$p_mab + 1, 2:4] <- tmp[sim, tt, parms_tmp$p_mab, 2:4]
-        y0_tmp[(parms_tmp$p_mab + 2):60, 1:4] <- tmp[sim, tt, (parms_tmp$p_mab + 1):59, 1:4]
+        y0_tmp[2:parms_tmp$dur_M, 1:5] <- tmp[sim, tt, 1:(parms_tmp$dur_M - 1), 1:5]
+        y0_tmp[parms_tmp$dur_M + 1, 1] <- tmp[sim, tt, parms_tmp$dur_M, 1] + tmp[sim, tt, parms_tmp$dur_M, 5]
+        y0_tmp[parms_tmp$dur_M + 1, 2:4] <- tmp[sim, tt, parms_tmp$dur_M, 2:4]
+        y0_tmp[(parms_tmp$dur_M + 2):60, 1:4] <- tmp[sim, tt, (parms_tmp$dur_M + 1):59, 1:4]
         y0_tmp[61, 1:4] <- tmp[sim, tt, 60, 1:4] + 59/60*tmp[sim, tt, 61, 1:4]
         y0_tmp[62:75, 1:4] <- 1/60*tmp[sim, tt, 61:(75 - 1), 1:4] + 59/60*tmp[sim, tt, 62:75, 1:4]
         y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
