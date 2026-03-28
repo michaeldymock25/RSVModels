@@ -34,15 +34,15 @@ get_contact_matrix <- function(pop, seed = 6824767){
 #' @description Generates matrix of initial values to be used as input to a transmission model
 #' @param mod The specific transmission model that requires initial values (base, vax or mab).
 #' @param size_months Population size for each age group. Is a parameter in parms.
+#' @param N_sim Number of simulations (draws from the parameter prior distributions)
 #' @return Returns matrix of initial values. Rows are age groups and columns are states. Final column contains incidence (zero initially).
 #' @name initial_values
 #' @export
-initial_values <- function(mod, size_months){
-  num_col <- ifelse(mod == "base", 4, ifelse(mod %in% c("vax", "mab"), 5, NA))
-  y0 <- matrix(0, nrow = 75, ncol = num_col)
-  y0[,1] <- size_months*0.99
-  y0[,3] <- size_months*0.01
-  y0 <- cbind(y0, matrix(0, nrow = 75, ncol = 1))
+initial_values <- function(mod, size_months, N_sim){
+  num_var <- ifelse(mod == "base", 5, ifelse(mod %in% c("vax", "mab"), 6, NA))
+  y0 <- array(data = 0, dim = c(N_sim, 75, num_var))
+  y0[,,1] <- rep(size_months*0.99, each = N_sim)
+  y0[,,3] <- rep(size_months*0.01, each = N_sim)
   return(y0)
 }
 
