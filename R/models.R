@@ -151,10 +151,10 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
                                 delta       = parms$delta[sim],
                                 gamma       = parms$gamma[sim],
                                 nu          = parms$nu[sim],
-                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12))),
+                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)),
                                 rho_V       = parms$rho_V[sim],
                                 dur_V       = parms$dur_V[sim],
-                                kappa_V     = parms$kappa_V[sim])
+                                kappa_V     = parms$kappa_V[sim]))
 
   out_l <- mclapply(1:N_batch, function(i){
     tmp <- array(NA, dim = c(batch_lens[i], max_time, 75, 6),
@@ -255,10 +255,10 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
                                 delta       = parms$delta[sim],
                                 gamma       = parms$gamma[sim],
                                 nu          = parms$nu[sim],
-                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12))),
+                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)),
                                 rho_M       = parms$rho_M[sim],
                                 dur_M       = parms$dur_M[sim],
-                                kappa_M     = parms$kappa_M[sim])
+                                kappa_M     = parms$kappa_M[sim]))
 
   out_l <- mclapply(1:N_batch, function(i){
     tmp <- array(NA, dim = c(batch_lens[i], max_time, 75, 6),

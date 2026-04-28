@@ -4,12 +4,14 @@
 \alias{initial_values}
 \title{initial_values}
 \usage{
-initial_values(mod, size_months)
+initial_values(mod, size_months, N_sim)
 }
 \arguments{
 \item{mod}{The specific transmission model that requires initial values (base, vax or mab).}
 
 \item{size_months}{Population size for each age group. Is a parameter in parms.}
+
+\item{N_sim}{Number of simulations (draws from the parameter prior distributions)}
 }
 \value{
 Returns matrix of initial values. Rows are age groups and columns are states. Final column contains incidence (zero initially).
