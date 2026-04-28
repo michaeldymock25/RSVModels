@@ -232,7 +232,7 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
       dE <- infectS + infectM - delta*E
       dI <- delta*E - gamma*I
       dR <- gamma*I - nu*R
-      dV <- -infectM
+      dM <- -infectM
       dinc <- infectS + infectM
 
       return(list(c(dS, dE, dI, dR, dM, dinc)))
