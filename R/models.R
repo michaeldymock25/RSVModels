@@ -41,30 +41,25 @@ mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
   N_batch <- ceiling(N_sim/batch_size)
   batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
 
-  batch_parms <- list()
-  for(i in 1:N_batch)
-    batch_parms[[i]] <- lapply((sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]), function(sim)
-                           list(y0          = y0[sim,,],
-                                size_months = parms$size_months,
-                                mixing      = parms$mixing,
-                                b0          = parms$b0,
-                                b1          = parms$b1,
-                                phi         = parms$phi,
-                                omega       = parms$omega,
-                                delta       = parms$delta[sim],
-                                gamma       = parms$gamma[sim],
-                                nu          = parms$nu[sim],
-                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12))))
-
   out_l <- mclapply(1:N_batch, function(i){
     tmp <- array(NA, dim = c(batch_lens[i], max_time, 75, 5),
                  dimnames = list("simulation" = 1:batch_lens[i],
                                  "time" = 1:max_time,
                                  "age" = parms$age_years,
                                  "variable" = c("S", "E", "I", "R", "Incidence")))
+    sim_ref <- (sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i])
     for(sim in 1:batch_lens[i]){
-      y0_tmp <- batch_parms[[i]][[sim]][["y0"]]
-      parms_tmp <- batch_parms[[i]][[sim]]
+      y0_tmp <- y0[sim_ref[sim],,]
+      parms_tmp <- list(size_months = parms$size_months,
+                        mixing      = parms$mixing,
+                        b0          = parms$b0,
+                        b1          = parms$b1,
+                        phi         = parms$phi,
+                        omega       = parms$omega,
+                        delta       = parms$delta[sim_ref[sim]],
+                        gamma       = parms$gamma[sim_ref[sim]],
+                        nu          = parms$nu[sim_ref[sim]],
+                        sigma       = c(1 - exp(-parms$r_sigma[sim_ref[sim]]*(1:12)), rep(1, 75 - 12)))
       for(tt in 1:max_time){
         mod_out <- ode(y = y0_tmp,
                        times = seq(from = tt - 1, to = tt, by = 0.25),
@@ -89,6 +84,7 @@ mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
                                "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "Incidence")))
   for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
+  gc()
 
   return(out)
 }
@@ -138,33 +134,28 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
   N_batch <- ceiling(N_sim/batch_size)
   batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
 
-  batch_parms <- list()
-  for(i in 1:N_batch)
-    batch_parms[[i]] <- lapply((sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]), function(sim)
-                           list(y0          = y0[sim,,],
-                                size_months = parms$size_months,
-                                mixing      = parms$mixing,
-                                b0          = parms$b0,
-                                b1          = parms$b1,
-                                phi         = parms$phi,
-                                omega       = parms$omega,
-                                delta       = parms$delta[sim],
-                                gamma       = parms$gamma[sim],
-                                nu          = parms$nu[sim],
-                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)),
-                                rho_V       = parms$rho_V[sim],
-                                dur_V       = parms$dur_V[sim],
-                                kappa_V     = parms$kappa_V[sim]))
-
   out_l <- mclapply(1:N_batch, function(i){
     tmp <- array(NA, dim = c(batch_lens[i], max_time, 75, 6),
                  dimnames = list("simulation" = 1:batch_lens[i],
                                  "time" = 1:max_time,
                                  "age" = parms$age_years,
                                  "variable" = c("S", "E", "I", "R", "V", "Incidence")))
+    sim_ref <- (sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i])
     for(sim in 1:batch_lens[i]){
-      y0_tmp <- batch_parms[[i]][[sim]][["y0"]]
-      parms_tmp <- batch_parms[[i]][[sim]]
+      y0_tmp <- y0[sim_ref[sim],,]
+      parms_tmp <- list(size_months = parms$size_months,
+                        mixing      = parms$mixing,
+                        b0          = parms$b0,
+                        b1          = parms$b1,
+                        phi         = parms$phi,
+                        omega       = parms$omega,
+                        delta       = parms$delta[sim_ref[sim]],
+                        gamma       = parms$gamma[sim_ref[sim]],
+                        nu          = parms$nu[sim_ref[sim]],
+                        sigma       = c(1 - exp(-parms$r_sigma[sim_ref[sim]]*(1:12)), rep(1, 75 - 12)),
+                        rho_V       = parms$rho_V[sim_ref[sim]],
+                        dur_V       = parms$dur_V[sim_ref[sim]],
+                        kappa_V     = parms$kappa_V[sim_ref[sim]])
       for(tt in 1:max_time){
         mod_out <- ode(y = y0_tmp,
                        times = seq(from = tt - 1, to = tt, by = 0.25),
@@ -193,6 +184,7 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
                                "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "V", "Incidence")))
   for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
+  gc()
 
   return(out)
 }
@@ -242,33 +234,28 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
   N_batch <- ceiling(N_sim/batch_size)
   batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
 
-  batch_parms <- list()
-  for(i in 1:N_batch)
-    batch_parms[[i]] <- lapply((sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]), function(sim)
-                           list(y0          = y0[sim,,],
-                                size_months = parms$size_months,
-                                mixing      = parms$mixing,
-                                b0          = parms$b0,
-                                b1          = parms$b1,
-                                phi         = parms$phi,
-                                omega       = parms$omega,
-                                delta       = parms$delta[sim],
-                                gamma       = parms$gamma[sim],
-                                nu          = parms$nu[sim],
-                                sigma       = c(1 - exp(-parms$r_sigma[sim]*(1:12)), rep(1, 75 - 12)),
-                                rho_M       = parms$rho_M[sim],
-                                dur_M       = parms$dur_M[sim],
-                                kappa_M     = parms$kappa_M[sim]))
-
   out_l <- mclapply(1:N_batch, function(i){
     tmp <- array(NA, dim = c(batch_lens[i], max_time, 75, 6),
                  dimnames = list("simulation" = 1:batch_lens[i],
                                  "time" = 1:max_time,
                                  "age" = parms$age_years,
                                  "variable" = c("S", "E", "I", "R", "M", "Incidence")))
+    sim_ref <- (sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i])
     for(sim in 1:batch_lens[i]){
-      y0_tmp <- batch_parms[[i]][[sim]][["y0"]]
-      parms_tmp <- batch_parms[[i]][[sim]]
+      y0_tmp <- y0[sim_ref[sim],,]
+      parms_tmp <- list(size_months = parms$size_months,
+                        mixing      = parms$mixing,
+                        b0          = parms$b0,
+                        b1          = parms$b1,
+                        phi         = parms$phi,
+                        omega       = parms$omega,
+                        delta       = parms$delta[sim_ref[sim]],
+                        gamma       = parms$gamma[sim_ref[sim]],
+                        nu          = parms$nu[sim_ref[sim]],
+                        sigma       = c(1 - exp(-parms$r_sigma[sim_ref[sim]]*(1:12)), rep(1, 75 - 12)),
+                        rho_M       = parms$rho_M[sim_ref[sim]],
+                        dur_M       = parms$dur_M[sim_ref[sim]],
+                        kappa_M     = parms$kappa_M[sim_ref[sim]])
       for(tt in 1:max_time){
         mod_out <- ode(y = y0_tmp,
                        times = seq(from = tt - 1, to = tt, by = 0.25),
@@ -297,6 +284,7 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1){
                                "age" = parms$age_years,
                                "variable" = c("S", "E", "I", "R", "M", "Incidence")))
   for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
+  gc()
 
   return(out)
 }
