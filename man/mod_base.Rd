@@ -4,7 +4,16 @@
 \alias{mod_base}
 \title{mod_base}
 \usage{
-mod_base(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1)
+mod_base(
+  y0,
+  max_time,
+  parms,
+  N_sim,
+  batch_size = 100,
+  ncores = 1,
+  thin = 1,
+  minimal = FALSE
+)
 }
 \arguments{
 \item{y0}{Matrix of initial values of the state variables (rows are age groups and columns are variables)}
@@ -20,6 +29,8 @@ mod_base(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1)
 \item{ncores}{Number of cores to run in parallel. Default is one.}
 
 \item{thin}{Integer used to thin stored outputs. Must be a factor of max_time. Note that this will not influence the transmission modelling. Default is one.}
+
+\item{minimal}{Logical indicator. If set to TRUE, then only minimal output is stored (incidence only). Default is FALSE.}
 }
 \value{
 Array of named outputs containing simulations, times, ages and states

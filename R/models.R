@@ -10,10 +10,11 @@
 #' @param batch_size Size of each batch for parallel simulations. Default is 100.
 #' @param ncores Number of cores to run in parallel. Default is one.
 #' @param thin Integer used to thin stored outputs. Must be a factor of max_time. Note that this will not influence the transmission modelling. Default is one.
+#' @param minimal Logical indicator. If set to TRUE, then only minimal output is stored (incidence only). Default is FALSE.
 #' @return Array of named outputs containing simulations, times, ages and states
 #' @name mod_base
 #' @export
-mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1){
+mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1, minimal = FALSE){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 5)
 
@@ -43,11 +44,19 @@ mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, t
   batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
 
   out_l <- mclapply(1:N_batch, function(i){
-    tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 5),
-                 dimnames = list("simulation" = 1:batch_lens[i],
-                                 "time" = 1:(max_time/thin),
-                                 "age" = parms$age_years,
-                                 "variable" = c("S", "E", "I", "R", "Incidence")))
+    if(minimal){
+      tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 1),
+                   dimnames = list("simulation" = 1:batch_lens[i],
+                                   "time" = 1:(max_time/thin),
+                                   "age" = parms$age_years,
+                                   "variable" = "Incidence"))
+    } else {
+      tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 5),
+                   dimnames = list("simulation" = 1:batch_lens[i],
+                                   "time" = 1:(max_time/thin),
+                                   "age" = parms$age_years,
+                                   "variable" = c("S", "E", "I", "R", "Incidence")))
+    }
     sim_ref <- (sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i])
     for(sim in 1:batch_lens[i]){
       y0_tmp <- y0[sim_ref[sim],,]
@@ -67,8 +76,11 @@ mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, t
                        func = deSolve_func,
                        parms = parms_tmp)
         mod_out <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 5)
-        if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
-
+        if(minimal){
+          if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out[,5]
+        } else {
+          if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
+        }
         y0_tmp <- matrix(0, nrow = 75, ncol = 4)
         y0_tmp[1, 1] <- parms_tmp$size_months[1]/12
         y0_tmp[2:60, 1:4] <- mod_out[1:59, 1:4]
@@ -79,12 +91,19 @@ mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, t
     }
     return(tmp)
   }, mc.cores = ncores)
-
-  out <- array(NA, dim = c(N_sim, max_time/thin, 75, 5),
-               dimnames = list("simulation" = 1:N_sim,
-                               "time" = 1:(max_time/thin),
-                               "age" = parms$age_years,
-                               "variable" = c("S", "E", "I", "R", "Incidence")))
+  if(minimal){
+    out <- array(NA, dim = c(N_sim, max_time/thin, 75, 1),
+                 dimnames = list("simulation" = 1:N_sim,
+                                 "time" = 1:(max_time/thin),
+                                 "age" = parms$age_years,
+                                 "variable" = "Incidence"))
+  } else {
+    out <- array(NA, dim = c(N_sim, max_time/thin, 75, 5),
+                 dimnames = list("simulation" = 1:N_sim,
+                                 "time" = 1:(max_time/thin),
+                                 "age" = parms$age_years,
+                                 "variable" = c("S", "E", "I", "R", "Incidence")))
+  }
   for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
   gc()
 
@@ -102,10 +121,11 @@ mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, t
 #' @param batch_size Size of each batch for parallel simulations. Default is 100.
 #' @param ncores Number of cores to run in parallel. Default is one.
 #' @param thin Integer used to thin stored outputs. Must be a factor of max_time. Note that this will not influence the transmission modelling. Default is one.
+#' @param minimal Logical indicator. If set to TRUE, then only minimal output is stored (vaccine recipients and incidence only). Default is FALSE.
 #' @return Array of named outputs containing simulations, times, ages and states
 #' @name mod_vax
 #' @export
-mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1){
+mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1, minimal = FALSE){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 6)
 
@@ -138,11 +158,19 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
   batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
 
   out_l <- mclapply(1:N_batch, function(i){
-    tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 6),
-                 dimnames = list("simulation" = 1:batch_lens[i],
-                                 "time" = 1:(max_time/thin),
-                                 "age" = parms$age_years,
-                                 "variable" = c("S", "E", "I", "R", "V", "Incidence")))
+    if(minimal){
+      tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 2),
+                   dimnames = list("simulation" = 1:batch_lens[i],
+                                   "time" = 1:(max_time/thin),
+                                   "age" = parms$age_years,
+                                   "variable" = c("V", "Incidence")))
+    } else {
+      tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 6),
+                   dimnames = list("simulation" = 1:batch_lens[i],
+                                   "time" = 1:(max_time/thin),
+                                   "age" = parms$age_years,
+                                   "variable" = c("S", "E", "I", "R", "V", "Incidence")))
+    }
     sim_ref <- (sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i])
     for(sim in 1:batch_lens[i]){
       y0_tmp <- y0[sim_ref[sim],,]
@@ -165,8 +193,11 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
                        func = deSolve_func,
                        parms = parms_tmp)
         mod_out <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 6)
-        if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
-
+        if(minimal){
+          if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out[,c(5,6)]
+        } else {
+          if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
+        }
         y0_tmp <- matrix(0, nrow = 75, ncol = 5)
         y0_tmp[1, 1] <- (1 - parms_tmp$kappa_V)*parms_tmp$size_months[1]/12
         y0_tmp[1, 5] <- parms_tmp$kappa_V*parms_tmp$size_months[1]/12
@@ -181,12 +212,19 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
     }
     return(tmp)
   }, mc.cores = ncores)
-
-  out <- array(NA, dim = c(N_sim, max_time/thin, 75, 6),
-               dimnames = list("simulation" = 1:N_sim,
-                               "time" = 1:(max_time/thin),
-                               "age" = parms$age_years,
-                               "variable" = c("S", "E", "I", "R", "V", "Incidence")))
+  if(minimal){
+    out <- array(NA, dim = c(N_sim, max_time/thin, 75, 2),
+                 dimnames = list("simulation" = 1:N_sim,
+                                 "time" = 1:(max_time/thin),
+                                 "age" = parms$age_years,
+                                 "variable" = c("V", "Incidence")))
+  } else {
+    out <- array(NA, dim = c(N_sim, max_time/thin, 75, 6),
+                 dimnames = list("simulation" = 1:N_sim,
+                                 "time" = 1:(max_time/thin),
+                                 "age" = parms$age_years,
+                                 "variable" = c("S", "E", "I", "R", "V", "Incidence")))
+  }
   for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
   gc()
 
@@ -204,10 +242,11 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
 #' @param batch_size Size of each batch for parallel simulations. Default is 100.
 #' @param ncores Number of cores to run in parallel. Default is one.
 #' @param thin Integer used to thin stored outputs. Must be a factor of max_time. Note that this will not influence the transmission modelling. Default is one.
+#' @param minimal Logical indicator. If set to TRUE, then only minimal output is stored (monoclonal antibody recipients and incidence only). Default is FALSE.
 #' @return Array of named outputs containing simulations, times, ages and states.
 #' @name mod_mab
 #' @export
-mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1){
+mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1, minimal = FALSE){
   deSolve_func <- function(t, y, parms){
     y <- matrix(y, nrow = 75, ncol = 6)
 
@@ -240,11 +279,19 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
   batch_lens <- sapply(1:N_batch, function(i) ifelse(i < N_batch, batch_size, N_sim - (N_batch - 1)*batch_size))
 
   out_l <- mclapply(1:N_batch, function(i){
-    tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 6),
-                 dimnames = list("simulation" = 1:batch_lens[i],
-                                 "time" = 1:(max_time/thin),
-                                 "age" = parms$age_years,
-                                 "variable" = c("S", "E", "I", "R", "M", "Incidence")))
+    if(minimal){
+      tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 2),
+                   dimnames = list("simulation" = 1:batch_lens[i],
+                                   "time" = 1:(max_time/thin),
+                                   "age" = parms$age_years,
+                                   "variable" = c("M", "Incidence")))
+    } else {
+      tmp <- array(NA, dim = c(batch_lens[i], max_time/thin, 75, 6),
+                   dimnames = list("simulation" = 1:batch_lens[i],
+                                   "time" = 1:(max_time/thin),
+                                   "age" = parms$age_years,
+                                   "variable" = c("S", "E", "I", "R", "M", "Incidence")))
+    }
     sim_ref <- (sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i])
     for(sim in 1:batch_lens[i]){
       y0_tmp <- y0[sim_ref[sim],,]
@@ -267,8 +314,11 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
                        func = deSolve_func,
                        parms = parms_tmp)
         mod_out <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 6)
-        if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
-
+        if(minimal){
+          if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out[,c(5,6)]
+        } else {
+          if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
+        }
         y0_tmp <- matrix(0, nrow = 75, ncol = 5)
         y0_tmp[1, 1] <- (1 - parms_tmp$kappa_M)*parms_tmp$size_months[1]/12
         y0_tmp[1, 5] <- parms_tmp$kappa_M*parms_tmp$size_months[1]/12
@@ -283,12 +333,19 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
     }
     return(tmp)
   }, mc.cores = ncores)
-
-  out <- array(NA, dim = c(N_sim, max_time/thin, 75, 6),
-               dimnames = list("simulation" = 1:N_sim,
-                               "time" = 1:(max_time/thin),
-                               "age" = parms$age_years,
-                               "variable" = c("S", "E", "I", "R", "M", "Incidence")))
+  if(minimal){
+    out <- array(NA, dim = c(N_sim, max_time/thin, 75, 2),
+                 dimnames = list("simulation" = 1:N_sim,
+                                 "time" = 1:(max_time/thin),
+                                 "age" = parms$age_years,
+                                 "variable" = c("M", "Incidence")))
+  } else {
+    out <- array(NA, dim = c(N_sim, max_time/thin, 75, 6),
+                 dimnames = list("simulation" = 1:N_sim,
+                                 "time" = 1:(max_time/thin),
+                                 "age" = parms$age_years,
+                                 "variable" = c("S", "E", "I", "R", "M", "Incidence")))
+  }
   for(i in 1:N_batch) out[(sum(c(0,batch_lens)[1:i]) + 1):sum(batch_lens[1:i]),,,] <- out_l[[i]]
   gc()
 
