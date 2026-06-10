@@ -4,7 +4,7 @@
 \alias{mod_vax}
 \title{mod_vax}
 \usage{
-mod_vax(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1)
+mod_vax(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, thin = 1)
 }
 \arguments{
 \item{y0}{Matrix of initial values of the state variables (rows are age groups and columns are variables)}
@@ -18,6 +18,8 @@ mod_vax(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1)
 \item{batch_size}{Size of each batch for parallel simulations. Default is 100.}
 
 \item{ncores}{Number of cores to run in parallel. Default is one.}
+
+\item{thin}{Integer used to thin stored outputs. Must be a factor of max_time. Note that this will not influence the transmission modelling. Default is one.}
 }
 \value{
 Array of named outputs containing simulations, times, ages and states
