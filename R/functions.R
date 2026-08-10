@@ -39,7 +39,7 @@ get_contact_matrix <- function(pop, seed = 6824767){
 #' @name initial_values
 #' @export
 initial_values <- function(mod, size_months, N_sim){
-  num_var <- ifelse(mod == "base", 5, ifelse(mod %in% c("vax", "mab"), 6, NA))
+  num_var <- ifelse(mod == "base", 5, ifelse(mod %in% c("vax", "mab"), 7, NA))
   y0 <- array(data = 0, dim = c(N_sim, 75, num_var))
   y0[,,1] <- rep(size_months*0.99, each = N_sim)
   y0[,,3] <- rep(size_months*0.01, each = N_sim)
