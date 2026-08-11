@@ -142,7 +142,7 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
       lambda <- b0*(1 + b1*cos(2*pi*t/12 + phi))*rowSums(s)
 
       infectS <- lambda*sigma*S
-      infectV <- lambda*(1-rho_V)*V
+      infectV <- lambda*(1-rho_V)*sigma*V
       dS <- nu*R - infectS
       dE <- infectS + infectV - delta*E
       dI <- delta*E - gamma*I
@@ -263,7 +263,7 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
       lambda <- b0*(1 + b1*cos(2*pi*t/12 + phi))*rowSums(s)
 
       infectS <- lambda*sigma*S
-      infectM <- lambda*(1-rho_M)*M
+      infectM <- lambda*(1-rho_M)*sigma*M
       dS <- nu*R - infectS
       dE <- infectS + infectM - delta*E
       dI <- delta*E - gamma*I
