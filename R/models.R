@@ -72,7 +72,7 @@ mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, t
                         sigma       = c(1 - exp(-parms$r_sigma[sim_ref[sim]]*(1:12)), rep(1, 75 - 12)))
       for(tt in 1:max_time){
         mod_out <- ode(y = y0_tmp,
-                       times = seq(from = 0, to = 1, by = 0.25),
+                       times = c(tt - 1, tt),
                        func = deSolve_func,
                        parms = parms_tmp)
         mod_out <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 5)
@@ -189,7 +189,7 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
                         kappa_V     = parms$kappa_V[sim_ref[sim]])
       for(tt in 1:max_time){
         mod_out <- ode(y = y0_tmp,
-                       times = seq(from = 0, to = 1, by = 0.25),
+                       times = c(tt - 1, tt),
                        func = deSolve_func,
                        parms = parms_tmp)
         mod_out <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 7)
@@ -310,7 +310,7 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
                         kappa_M     = parms$kappa_M[sim_ref[sim]])
       for(tt in 1:max_time){
         mod_out <- ode(y = y0_tmp,
-                       times = seq(from = 0, to = 1, by = 0.25),
+                       times = c(tt - 1, tt),
                        func = deSolve_func,
                        parms = parms_tmp)
         mod_out <- matrix(as.vector(mod_out[nrow(mod_out),-1]), nrow = 75, ncol = 7)
