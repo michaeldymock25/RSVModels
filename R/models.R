@@ -208,7 +208,7 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
         y0_tmp[parms_tmp$dur_V + 1, 2:4] <- mod_out[parms_tmp$dur_V, 2:4]*age_rate[parms_tmp$dur_V] +
                                             mod_out[parms_tmp$dur_V + 1, 2:4]*(1-age_rate[parms_tmp$dur_V + 1])
         y0_tmp[(parms_tmp$dur_V + 2):75, 1:4] <- mod_out[(parms_tmp$dur_V + 1):74, 1:4]*age_rate[(parms_tmp$dur_V + 1):74] +
-                                                 mod_out[(parms_tmp$dur_V + 2):75, 1:4]*(1-age_rate[2:75])
+                                                 mod_out[(parms_tmp$dur_V + 2):75, 1:4]*(1-age_rate[(parms_tmp$dur_V + 2):75])
         y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 2))
       }
     }
@@ -332,7 +332,7 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
         y0_tmp[parms_tmp$dur_M + 1, 2:4] <- mod_out[parms_tmp$dur_M, 2:4]*age_rate[parms_tmp$dur_M] +
                                             mod_out[parms_tmp$dur_M + 1, 2:4]*(1-age_rate[parms_tmp$dur_M + 1])
         y0_tmp[(parms_tmp$dur_M + 2):75, 1:4] <- mod_out[(parms_tmp$dur_M + 1):74, 1:4]*age_rate[(parms_tmp$dur_M + 1):74] +
-                                                 mod_out[(parms_tmp$dur_M + 2):75, 1:4]*(1-age_rate[2:75])
+                                                 mod_out[(parms_tmp$dur_M + 2):75, 1:4]*(1-age_rate[(parms_tmp$dur_M + 2):75])
         y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 2))
       }
     }
