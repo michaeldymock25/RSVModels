@@ -81,11 +81,10 @@ mod_base <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, t
         } else {
           if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
         }
+        age_rate <- parms_tmp$size_months[1]/parms_tmp$size_months
         y0_tmp <- matrix(0, nrow = 75, ncol = 4)
-        y0_tmp[1, 1] <- parms_tmp$size_months[1]/12
-        y0_tmp[2:60, 1:4] <- mod_out[1:59, 1:4]
-        y0_tmp[61, 1:4] <- mod_out[60, 1:4] + 59/60*mod_out[61, 1:4]
-        y0_tmp[62:75, 1:4] <- 1/60*mod_out[61:(75 - 1), 1:4] + 59/60*mod_out[62:75, 1:4]
+        y0_tmp[1, 1] <- parms_tmp$size_months[1]
+        y0_tmp[2:75, 1:4] <- mod_out[1:74, 1:4]*age_rate[1:74] + mod_out[2:75, 1:4]*(1-age_rate[2:75])
         y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 1))
       }
     }
@@ -198,15 +197,18 @@ mod_vax <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
         } else {
           if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
         }
+        age_rate <- parms_tmp$size_months[1]/parms_tmp$size_months
         y0_tmp <- matrix(0, nrow = 75, ncol = 5)
-        y0_tmp[1, 1] <- (1 - parms_tmp$kappa_V)*parms_tmp$size_months[1]/12
-        y0_tmp[1, 5] <- parms_tmp$kappa_V*parms_tmp$size_months[1]/12
-        y0_tmp[2:parms_tmp$dur_V, 1:5] <- mod_out[1:(parms_tmp$dur_V - 1), 1:5]
-        y0_tmp[parms_tmp$dur_V + 1, 1] <- mod_out[parms_tmp$dur_V, 1] + mod_out[parms_tmp$dur_V, 5]
-        y0_tmp[parms_tmp$dur_V + 1, 2:4] <- mod_out[parms_tmp$dur_V, 2:4]
-        y0_tmp[(parms_tmp$dur_V + 2):60, 1:4] <- mod_out[(parms_tmp$dur_V + 1):59, 1:4]
-        y0_tmp[61, 1:4] <- mod_out[60, 1:4] + 59/60*mod_out[61, 1:4]
-        y0_tmp[62:75, 1:4] <- 1/60*mod_out[61:(75 - 1), 1:4] + 59/60*mod_out[62:75, 1:4]
+        y0_tmp[1, 1] <- (1 - parms_tmp$kappa_V)*parms_tmp$size_months[1]
+        y0_tmp[1, 5] <- parms_tmp$kappa_V*parms_tmp$size_months[1]
+        y0_tmp[2:parms_tmp$dur_V, 1:5] <- mod_out[1:(parms_tmp$dur_V - 1), 1:5]*age_rate[1:(parms_tmp$dur_V - 1)] +
+                                          mod_out[2:parms_tmp$dur_V, 1:5]*(1-age_rate[2:parms_tmp$dur_V])
+        y0_tmp[parms_tmp$dur_V + 1, 1] <- (mod_out[parms_tmp$dur_V, 1] + mod_out[parms_tmp$dur_V, 5])*age_rate[parms_tmp$dur_V] +
+                                          mod_out[parms_tmp$dur_V + 1, 5]*(1-age_rate[parms_tmp$dur_V + 1])
+        y0_tmp[parms_tmp$dur_V + 1, 2:4] <- mod_out[parms_tmp$dur_V, 2:4]*age_rate[parms_tmp$dur_V] +
+                                            mod_out[parms_tmp$dur_V + 1, 2:4]*(1-age_rate[parms_tmp$dur_V + 1])
+        y0_tmp[(parms_tmp$dur_V + 2):75, 1:4] <- mod_out[(parms_tmp$dur_V + 1):74, 1:4]*age_rate[(parms_tmp$dur_V + 1):74] +
+                                                 mod_out[(parms_tmp$dur_V + 2):75, 1:4]*(1-age_rate[2:75])
         y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 2))
       }
     }
@@ -319,15 +321,18 @@ mod_mab <- function(y0, max_time, parms, N_sim, batch_size = 100, ncores = 1, th
         } else {
           if(tt %% thin == 0) tmp[sim,tt/thin,,] <- mod_out
         }
+        age_rate <- parms_tmp$size_months[1]/parms_tmp$size_months
         y0_tmp <- matrix(0, nrow = 75, ncol = 5)
-        y0_tmp[1, 1] <- (1 - parms_tmp$kappa_M)*parms_tmp$size_months[1]/12
-        y0_tmp[1, 5] <- parms_tmp$kappa_M*parms_tmp$size_months[1]/12
-        y0_tmp[2:parms_tmp$dur_M, 1:5] <- mod_out[1:(parms_tmp$dur_M - 1), 1:5]
-        y0_tmp[parms_tmp$dur_M + 1, 1] <- mod_out[parms_tmp$dur_M, 1] + mod_out[parms_tmp$dur_M, 5]
-        y0_tmp[parms_tmp$dur_M + 1, 2:4] <- mod_out[parms_tmp$dur_M, 2:4]
-        y0_tmp[(parms_tmp$dur_M + 2):60, 1:4] <- mod_out[(parms_tmp$dur_M + 1):59, 1:4]
-        y0_tmp[61, 1:4] <- mod_out[60, 1:4] + 59/60*mod_out[61, 1:4]
-        y0_tmp[62:75, 1:4] <- 1/60*mod_out[61:(75 - 1), 1:4] + 59/60*mod_out[62:75, 1:4]
+        y0_tmp[1, 1] <- (1 - parms_tmp$kappa_M)*parms_tmp$size_months[1]
+        y0_tmp[1, 5] <- parms_tmp$kappa_M*parms_tmp$size_months[1]
+        y0_tmp[2:parms_tmp$dur_M, 1:5] <- mod_out[1:(parms_tmp$dur_M - 1), 1:5]*age_rate[1:(parms_tmp$dur_M - 1)] +
+                                          mod_out[2:parms_tmp$dur_M, 1:5]*(1-age_rate[2:parms_tmp$dur_M])
+        y0_tmp[parms_tmp$dur_M + 1, 1] <- (mod_out[parms_tmp$dur_M, 1] + mod_out[parms_tmp$dur_M, 5])*age_rate[parms_tmp$dur_M] +
+                                          mod_out[parms_tmp$dur_M + 1, 5]*(1-age_rate[parms_tmp$dur_M + 1])
+        y0_tmp[parms_tmp$dur_M + 1, 2:4] <- mod_out[parms_tmp$dur_M, 2:4]*age_rate[parms_tmp$dur_M] +
+                                            mod_out[parms_tmp$dur_M + 1, 2:4]*(1-age_rate[parms_tmp$dur_M + 1])
+        y0_tmp[(parms_tmp$dur_M + 2):75, 1:4] <- mod_out[(parms_tmp$dur_M + 1):74, 1:4]*age_rate[(parms_tmp$dur_M + 1):74] +
+                                                 mod_out[(parms_tmp$dur_M + 2):75, 1:4]*(1-age_rate[2:75])
         y0_tmp <- cbind(y0_tmp, matrix(0, nrow = 75, ncol = 2))
       }
     }
